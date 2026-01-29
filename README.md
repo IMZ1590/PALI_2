@@ -63,4 +63,4 @@ Once running, open your browser to: [http://localhost:7777](http://localhost:777
 ## Contact
 **Min June Yang**  
 Email: minjune1590@kbsi.re.kr  
-LinkedIn: [Profile](https://www.linkedin.com/in/bionmr/)
+LinkedIn: [Min June Yang](https://www.linkedin.com/in/bionmr/)
