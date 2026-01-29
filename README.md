@@ -9,7 +9,7 @@
 - **PCA Visualization**: Interactive 2D and 3D plots of scores and loadings.
 - **Outlier Detection**: Statistical identification of significant chemical shift changes (Mahalanobis distance & P-value).
 - **Binding Affinity (K<sub>d</sub>) Fitting**:
-  - **Traditional**: Standard independent fitting per residue.
+  - **Traditional**: Standard fitting with 2D or 1D spectra.
   - **Relax**: Global fitting shared across residues for robust estimation.
 
 ## Prerequisites
