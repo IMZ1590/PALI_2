@@ -18,7 +18,7 @@
     <strong>Binding Affinity (K<sub>d</sub>) Fitting</strong>:
     <ul>
       <li><strong>Traditional</strong>: Standard non-linear regression fitting using 2D or 1D spectral data.</li>
-      <li><strong>Relax</strong>: An alternative <strong>fitting approach</strong> used when standard non-linear regression does not converge or yield valid results.</li>
+      <li><strong>Relax</strong>: An alternative fitting approach used when standard non-linear regression does not converge or yield valid results.</li>
     </ul>
   </li>
 </ul>
