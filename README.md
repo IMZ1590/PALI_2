@@ -8,9 +8,9 @@
 - **1D Projection Analysis**: Projects 2D data into <sup>1</sup>H and <sup>15</sup>N dimensions for simplified visualization.
 - **PCA Visualization**: Interactive 2D and 3D plots of scores and loadings.
 - **Outlier Detection**: Statistical identification of significant chemical shift changes (Mahalanobis distance & P-value).
-- **Binding Affinity (Kd) Fitting**:
+- **Binding Affinity (K<sub>d</sub>) Fitting**:
   - **Traditional**: Standard independent fitting per residue.
-  - **Universal (Relax)**: Global fitting shared across residues for robust estimation.
+  - **Relax**: Global fitting shared across residues for robust estimation.
 
 ## Prerequisites
 
