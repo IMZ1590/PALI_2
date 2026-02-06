@@ -195,26 +195,10 @@ else:
     print(f"Warning: Frontend directory not found at {frontend_dir}")
 
 # Startup Event for Auto-Open
-@app.on_event("startup")
-async def startup_event():
-    import webbrowser
-    import threading
-    import time
-    
-    port = int(os.environ.get("PORT", 7777))
-    url = f"http://127.0.0.1:{port}"
-    
-    def open_browser():
-        # Give server a moment to bind
-        time.sleep(1.0)
-        print(f"[INFO] Opening Browser: {url}")
-        try:
-            # Force NEW TAB (new=2)
-            webbrowser.open(url, new=2)
-        except Exception as e:
-            print(f"[WARN] Failed to open browser: {e}")
-
-    threading.Thread(target=open_browser, daemon=True).start()
+# Auto-open removed to default to run.sh/run.bat control
+# @app.on_event("startup")
+# async def startup_event():
+#     pass
 
 if __name__ == "__main__":
     import uvicorn

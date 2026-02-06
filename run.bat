@@ -11,6 +11,8 @@ echo [INFO] Installing Dependencies...
 venv\Scripts\python -m pip install -r requirements.txt
 
 echo [INFO] Starting Server...
+:: Kill any existing process on port 7777
+FOR /F "tokens=5" %%a IN ('netstat -aon ^| find ":7777" ^| find "LISTENING"') DO taskkill /f /pid %%a >nul 2>&1
 start "" "http://localhost:7777"
 venv\Scripts\python -m uvicorn backend.main:app --host 127.0.0.1 --port 7777 --reload
 pause

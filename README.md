@@ -1,5 +1,6 @@
-# PALI <sup>2</sup> (PCA Analysis for Ligand Interactions 2)
-
+# Principle Component Analysis for Ligand Interaction 2 (PALI 2) - Version 1.01
+> **Last Release**: 2026.02.06
+ 
 **PALI <sup>2</sup>** is a web-based tool for analyzing NMR data using Principal Component Analysis (PCA). It specifically targets ligand-protein interaction studies, providing robust analysis for both 1D and 2D NMR titration series.
 
 ## Features
@@ -20,6 +21,19 @@
       <li><strong>Traditional</strong>: Standard non-linear regression fitting using 2D or 1D spectral data.</li>
       <li><strong>Relax</strong>: An alternative fitting approach used when standard non-linear regression does not converge or yield valid results.</li>
     </ul>
+  </li>
+  <li>
+    <strong>Importance Analysis (Loadings)</strong>: Visualizes which spectral regions contribute most to the Principal Components (PC1), helping to identify key residues involved in binding.
+  </li>
+  <li>
+    <strong>Enhanced Data Export</strong>:
+    <ul>
+      <li><strong>Excel Export</strong>: Download full analysis results including fitted Kd values and errors.</li>
+      <li><strong>PNG Export</strong>: Save high-quality images of the analysis dashboard.</li>
+    </ul>
+  </li>
+  <li>
+    <strong>Log Scale Visualization</strong>: Toggle between linear and logarithmic concentration scales for better visualization of binding curves.
   </li>
 </ul>
 

@@ -340,6 +340,8 @@ def run_pca_and_fit(data_list, concentrations, protein_conc=50.0, regime="Interm
     if ppm_axes and len(ppm_axes) == len(data_list):
         try:
              data_list, common_axis = align_spectra(data_list, ppm_axes)
+             if shape_2d and len(data_list) > 0 and data_list[0].ndim == 2:
+                 shape_2d = data_list[0].shape
         except Exception as e:
              return {"success": False, "error": f"Alignment failed: {str(e)}"}
     elif ppm_axes and len(ppm_axes) > 0:
@@ -500,7 +502,15 @@ def run_pca_and_fit(data_list, concentrations, protein_conc=50.0, regime="Interm
             "variance": var,
             "pc1_fit": {"traditional": fit_trad(pc1), "universal": fit_with_regime_constraint(concs_arr, pc1, protein_conc, regime)},
             "pc2_fit": {"traditional": fit_trad(pc2), "universal": fit_with_regime_constraint(concs_arr, pc2, protein_conc, regime)},
-            "spectra_check": spectra_payload
+            "spectra_check": spectra_payload,
+            "loadings": (
+                [downsample_2d(comp, rows, cols, 
+                              max(1, int(np.ceil(rows/256))), max(1, int(np.ceil(cols/256))), 
+                              rows//max(1, int(np.ceil(rows/256))), cols//max(1, int(np.ceil(cols/256)))).tolist() 
+                 for comp in pca.components_]
+                if shape_2d and (shape_2d[0] > 256 or shape_2d[1] > 256) 
+                else pca.components_.tolist()
+            )
         }
     except Exception as e:
         return {"success": False, "error": str(e)}

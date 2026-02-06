@@ -4,9 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PALI 2</title>
+    <title>Principle Component Analysis for Ligand Interaction 2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -94,9 +96,9 @@
         }
 
         .custom-super {
-            font-size: 0.5em;
+            font-size: 0.6em;
             position: relative;
-            top: -1.1em;
+            top: -1em;
             vertical-align: baseline;
             background: none !important;
             -webkit-text-fill-color: #004EA2 !important;
@@ -128,14 +130,19 @@
             <img id="kbsi-logo"
                 class="absolute top-0 right-0 h-12 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
                 alt="KBSI Logo">
-            <h1 class="text-5xl font-bold mb-4">
-                <span class="gradient-text">PALI</span><span class="custom-super">2</span>
+            <h1 class="text-4xl md:text-5xl font-bold mb-2 md:mb-4">
+                <span class="gradient-text">PALI<span class="custom-super">2</span></span>
             </h1>
-            <p class="text-slate-600 text-lg mb-4">PCA Analysis for Ligand Interactions 2</p>
+            <div class="absolute top-0 left-4 text-left">
+                <div class="text-sm text-indigo-500 font-bold bg-indigo-50 px-2 py-1 rounded inline-block mb-1">Ver 1.01
+                </div>
+                <div class="text-[10px] text-slate-400">Last Release: 2026.02.06</div>
+            </div>
+            <p class="text-slate-600 text-lg mb-4">Principle Component Analysis for Ligand Interactions 2</p>
         </header>
         <main class="w-full px-1 py-8 relative z-10">
             <div class="flex flex-col gap-10">
-                <div class="grid grid-cols-4 gap-6 h-[400px]">
+                <div class="grid grid-cols-4 gap-6 h-[400px] min-h-[400px] max-h-[400px]">
                     <div id="panel-dir-scan"
                         class="col-span-1 glass p-6 rounded-2xl flex flex-col h-full border border-white/20">
                         <h2 class="text-xl font-semibold mb-4 flex items-center text-slate-700 flex-none">
@@ -197,9 +204,9 @@
                         </div>
                     </div>
                 </div>
-                <div id="bottom-row" class="hidden grid grid-cols-4 gap-6 items-start mt-4">
+                <div id="bottom-row" class="hidden grid grid-cols-4 gap-6 items-start mt-4 min-h-[500px]">
                     <div id="panel-config"
-                        class="col-span-1 glass p-6 rounded-2xl flex flex-col space-y-4 border border-white/20">
+                        class="col-span-1 glass p-6 rounded-2xl flex flex-col space-y-4 border border-white/20 h-full">
                         <div class="flex justify-between items-center mb-2 flex-none">
                             <h2 class="text-xl font-semibold text-slate-700 flex items-center gap-2">
                                 Analysis Config
@@ -279,6 +286,39 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Result Controls & Importance -->
+                <div id="results-controls"
+                    class="hidden col-span-4 glass p-4 rounded-xl flex items-center justify-between border border-white/20 mb-4">
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center cursor-pointer space-x-2">
+                            <input type="checkbox" id="log-scale-toggle" onchange="toggleLogScale()"
+                                class="form-checkbox h-4 w-4 text-indigo-600 rounded bg-slate-100 border-slate-300">
+                            <span class="text-sm text-slate-700 font-semibold">Log Scale (Concentration)</span>
+                        </label>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="exportToExcel()"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg flex items-center shadow-lg transition-all text-sm font-bold">
+                            <span class="mr-2">📊</span> Excel
+                        </button>
+                        <button onclick="exportToPNG()"
+                            class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg flex items-center shadow-lg transition-all text-sm font-bold">
+                            <span class="mr-2">💾</span> Save PNG
+                        </button>
+                    </div>
+                </div>
+
+                <div id="importance-section"
+                    class="hidden col-span-4 glass p-6 rounded-2xl border border-white/20 mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-700 flex items-center">
+                        <span class="mr-2">🔍</span> Importance Analysis (Loadings)
+                    </h2>
+                    <p class="text-sm text-slate-500 mb-4">Visualizes which spectral regions contribute most to the
+                        Principal Components.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="importance-plots"></div>
+                </div>
+
             </div>
     </div>
     <footer class="mt-12 py-8 text-center text-slate-400 text-sm">
@@ -298,7 +338,7 @@
                     class="text-indigo-400 hover:text-indigo-600 transition-colors">minjune1590@kbsi.re.kr</a>
             </div>
         </div>
-        &copy; 2026 PALI 2. Powered by KBSI.
+        &copy; 2026 PALI<sup>2</sup>. Powered by KBSI.
     </footer>
     <script>
         const API_BASE = window.location.protocol === 'file:' ? 'http://127.0.0.1:7777' : '';
@@ -407,6 +447,9 @@
                 document.getElementById('btn-select-all').classList.add('hidden');
             }
             // Removed buggy line that hid the button immediately
+            // Clear previous list to prevent duplication/growth
+            container.innerHTML = '';
+
             experiments.forEach((exp, idx) => {
                 const div = document.createElement('div');
                 div.className = 'exp-row flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200';
@@ -481,8 +524,203 @@
                 renderSpectraCheck(data.result_h.spectra_check, 'spectra-plot-1d', data.concentrations);
             }
             render3WayComparison(data);
+
+            // Show result controls
+            document.getElementById('results-controls').classList.remove('hidden');
+
+            // Render Importance
+            renderImportance(data);
         }
+
+        function toggleLogScale() {
+            // Re-render plots with new scale
+            const data = window.lastAnalysisData;
+            if (data) displayResults(data);
+        }
+
+        async function exportToPNG() {
+            const container = document.querySelector('main');
+            // We capture the main area
+            try {
+                const canvas = await html2canvas(container, {
+                    scale: 2,
+                    backgroundColor: '#f8fafc'
+                });
+                const link = document.createElement('a');
+                link.download = 'PALI_Analysis_Results.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            } catch (err) {
+                console.error(err);
+                alert('Export failed: ' + err.message);
+            }
+        }
+
+        function exportToExcel() {
+            const data = window.lastAnalysisData;
+            if (!data) return;
+
+            const wb = XLSX.utils.book_new();
+
+            // Summary Sheet
+            const summaryData = [];
+            summaryData.push(['Experiment', 'Protein Conc', 'Ligand Conc']);
+            data.concentrations.forEach((c, i) => {
+                summaryData.push([`Exp ${i + 1}`, 50, c]); // Protein conc hardcoded/approx for now
+            });
+            summaryData.push([]);
+
+            ['2d', 'h', 'n'].forEach(type => {
+                const res = data[`result_${type}`];
+                if (res && res.success) {
+                    summaryData.push([`--- ${type.toUpperCase()} Results ---`]);
+                    ['pc1', 'pc2'].forEach(pc => {
+                        const fit = res[`${pc}_fit`];
+                        const fitType = (fit.universal && fit.universal.success) ? 'Relax' : 'Trad';
+                        const f = (fitType === 'Relax') ? fit.universal : fit.traditional;
+                        if (f && f.success) {
+                            summaryData.push([`${type.toUpperCase()} ${pc.toUpperCase()}`, `Kd: ${f.kd.toFixed(2)}`, `Err: ${f.kd_err.toFixed(2)}`, fitType]);
+                        } else {
+                            summaryData.push([`${type.toUpperCase()} ${pc.toUpperCase()}`, 'No Fit']);
+                        }
+                    });
+                    summaryData.push([]);
+                }
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, ws, "Summary");
+
+            XLSX.writeFile(wb, "PALI_Results.xlsx");
+        }
+
+        function renderImportance(data) {
+            const container = document.getElementById('importance-plots');
+            container.innerHTML = '';
+            const section = document.getElementById('importance-section');
+
+            // Check if we have loadings
+            let hasLoadings = false;
+
+            // Determine which plots to show
+            // User Request: If 2D analysis exists, show ONLY 2D heatmap. Hide H/N plots.
+            // If 1D analysis (no 2D), show H (and N if available).
+            let types = [];
+            if (data.result_2d && data.result_2d.success) {
+                types = ['2d'];
+            } else {
+                types = ['h', 'n']; // Fallback for 1D data
+            }
+
+            types.forEach(type => {
+                const res = data[`result_${type}`];
+                if (res && res.loadings) {
+                    hasLoadings = true;
+                    // Plot PC1 Loading
+                    const divId = `imp-${type}-pc1`;
+                    const div = document.createElement('div');
+                    // Taller for 2D Heatmap (600px), shorter for 1D plots (300px)
+                    const heightClass = (type === '2d') ? 'h-[600px]' : 'h-[300px]';
+                    div.className = `w-full ${heightClass} bg-white rounded border border-slate-200`;
+                    div.id = divId;
+                    container.appendChild(div);
+
+                    let loading = res.loadings[0]; // PC1
+                    const ppm = (type === 'n') ? res.spectra_check.ppm_15n : res.spectra_check.ppm;
+
+                    //Robustness: if loading length != ppm length, try to use just index or warn
+                    let x_axis = ppm;
+                    let x_title = 'ppm';
+
+                    if (ppm && loading.length !== ppm.length) {
+                        console.warn(`Mismatch in ${type} loading length (${loading.length}) vs ppm (${ppm.length}). Using index.`);
+                        x_axis = Array.from({ length: loading.length }, (_, i) => i);
+                        x_title = 'Index';
+                    }
+
+                    // If 2D (HSQC), heatmap
+                    if (type === '2d' && res.spectra_check.shape_2d) {
+                        try {
+                            const [rows, cols] = res.spectra_check.shape_2d;
+                            const ppm_n = res.spectra_check.ppm_15n;
+                            const ppm_h = res.spectra_check.ppm;
+
+                            // Reshape flattened loading back to 2D
+                            // Backend flattens: typically row-major (C-style) or based on how it constructed X
+                            // analyzer.py: X = np.array([d.flatten() for d in data_list])
+                            // d.flatten() in numpy is C-style (row-major) by default.
+                            // So we slice 1D loading into rows.
+
+                            const z_data = [];
+                            if (loading.length === rows * cols) {
+                                for (let r = 0; r < rows; r++) {
+                                    const row = [];
+                                    for (let c = 0; c < cols; c++) {
+                                        // Take Absolute value for Importance Magnitude (White = 0)
+                                        row.push(Math.abs(loading[r * cols + c]));
+                                    }
+                                    z_data.push(row);
+                                }
+
+                                const trace = {
+                                    z: z_data,
+                                    x: ppm_h, // 1H on X
+                                    y: ppm_n, // 15N on Y
+                                    type: 'heatmap',
+                                    colorscale: [
+                                        [0, 'rgb(255,255,255)'],
+                                        [0.5, 'rgb(0,0,255)'],
+                                        [1, 'rgb(255,0,0)']
+                                    ],
+                                    colorbar: { title: '|Weight|', thickness: 15 },
+                                    hoverongaps: false
+                                };
+
+                                const layout = {
+                                    title: `${type.toUpperCase()} PC1 Importance (Abs Loadings)`,
+                                    xaxis: { title: '<sup>1</sup>H (ppm)', autorange: 'reversed' },
+                                    yaxis: { title: '<sup>15</sup>N (ppm)', autorange: 'reversed' },
+                                    margin: { t: 50, b: 50, l: 60, r: 20 },
+                                    hovermode: 'closest'
+                                };
+                                Plotly.newPlot(divId, [trace], layout);
+                            } else {
+                                throw new Error(`Shape mismatch: Loading len ${loading.length} != ${rows}x${cols}`);
+                            }
+                        } catch (e) {
+                            console.error("2D Loading Render Error:", e);
+                            div.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-rose-500">Error rendering 2D map: ${e.message}</div>`;
+                        }
+                    } else {
+                        // 1D Projection (Line Plot)
+                        const trace = {
+                            x: x_axis,
+                            y: loading,
+                            mode: 'lines',
+                            line: { color: '#0ea5e9', width: 1.5 },
+                            fill: 'tozeroy',
+                            name: 'PC1 Loading'
+                        };
+                        const layout = {
+                            title: `${type.toUpperCase()} PC1 Importance`,
+                            xaxis: { title: x_title, autorange: (x_title === 'ppm' ? 'reversed' : undefined) },
+                            yaxis: { title: 'Weight' },
+                            margin: { t: 30, b: 30, l: 40, r: 10 }
+                        };
+                        Plotly.newPlot(divId, [trace], layout);
+                    }
+                }
+            });
+
+            if (hasLoadings) {
+                section.classList.remove('hidden');
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+
         function render3WayComparison(data) {
+            window.lastAnalysisData = data; // Store for global access
             const container = document.getElementById('bottom-row');
             console.log("3-Way Analysis Data Received:", data);
             const children = Array.from(container.children);
@@ -497,11 +735,11 @@
             }
             if (data.result_h) {
                 console.log("Adding 1H Projection Column");
-                container.appendChild(createColumn('1H Projection', data.result_h, data.concentrations));
+                container.appendChild(createColumn('<sup>1</sup>H Projection', data.result_h, data.concentrations));
             }
             if (data.result_n) {
                 console.log("Adding 15N Projection Column");
-                container.appendChild(createColumn('15N Projection', data.result_n, data.concentrations));
+                container.appendChild(createColumn('<sup>15</sup>N Projection', data.result_n, data.concentrations));
             }
         }
         function createColumn(title, result, sortedConcs) {
@@ -554,7 +792,7 @@
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 font: { color: '#94a3b8', size: 10 },
                 xaxis: {
-                    title: '1H ppm',
+                    title: '<sup>1</sup>H ppm',
                     autorange: 'reversed',
                     gridcolor: '#e2e8f080'
                 },
@@ -640,7 +878,7 @@
                 title: { text: title, font: { size: 12, color: '#475569' } },
                 paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
                 font: { color: '#64748b', size: 10 },
-                xaxis: { title: 'Conc (uM)' },
+                xaxis: { title: 'Conc (uM)', type: document.getElementById('log-scale-toggle').checked ? 'log' : 'linear' },
                 yaxis: { title: 'Score' },
                 margin: { t: 25, b: 25, l: 30, r: 10 },
                 showlegend: false
