@@ -70,8 +70,8 @@ pip install -r requirements.txt
 ## Running the Application
 
 ### Using Convenience Scripts
-- **Windows**: Double-click `run.bat`
-- **Linux / macOS**: Run `./run.sh`
+- **Windows**: Double-click `PALI2.bat`
+- **Linux / macOS**: Run `./PALI2.sh`
 
 ### Manual Start
 ```bash
