@@ -149,7 +149,7 @@
                             Directory Scan
                         </h2>
                         <div
-                            class="flex space-x-4 bg-slate-100 p-2 rounded-lg inline-flex border border-slate-200 mb-4 self-start flex-none">
+                            class="flex space-x-4 bg-slate-100 p-2 rounded-lg inline-flex border border-slate-200 mb-4 self-start flex-none items-center">
                             <label class="inline-flex items-center cursor-pointer">
                                 <input type="radio" name="scanDim" value="1D"
                                     class="form-radio text-indigo-500 bg-white border-slate-300 focus:ring-indigo-500">
@@ -159,7 +159,29 @@
                                 <input type="radio" name="scanDim" value="2D"
                                     class="form-radio text-indigo-500 bg-white border-slate-300 focus:ring-indigo-500"
                                     checked>
-                                <span class="ml-2 text-sm text-slate-600">2D</span>
+                                <span class="ml-2 text-sm text-slate-600">2D 2rr</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer relative group">
+                                <input type="radio" name="scanDim" value="2D_ucsf"
+                                    class="form-radio text-indigo-500 bg-white border-slate-300 focus:ring-indigo-500">
+                                <span class="ml-2 text-sm text-slate-600">2D ucsf</span>
+                                <div class="ml-1 cursor-help text-slate-400 hover:text-indigo-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div
+                                    class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-800 text-slate-100 text-[10px] rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl border border-slate-700">
+                                    <p class="font-bold mb-1 text-indigo-300">UCSF (Sparky) Files</p>
+                                    <p>Program assumes all processed UCSF files</p>
+                                    <p class="mt-1 text-slate-400">have same parameters (NS, RG, TD...).</p>
+                                    <!-- Arrow -->
+                                    <div
+                                        class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-slate-800">
+                                    </div>
+                                </div>
                             </label>
                         </div>
                         <div class="space-y-4 flex-1 overflow-hidden flex flex-col">
