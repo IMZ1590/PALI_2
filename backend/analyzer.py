@@ -11,6 +11,155 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import io
 import base64
+
+from scipy.ndimage import maximum_filter
+
+def extract_loading_peaks(loading, ppm_h, ppm_n=None, shape_2d=None, top_n=20, X=None):
+    """
+    Find major peaks using local maxima detection (maximum_filter).
+    Returns sorted list of dicts with rank, ppm, weight, intensities.
+    """
+    try:
+        
+        loading = np.nan_to_num(loading)
+        
+        abs_loading = np.abs(loading)
+        peaks = []
+        
+        if shape_2d:
+            rows, cols = shape_2d
+            
+            if abs_loading.size != rows * cols:
+                
+                 return []
+            
+            abs_map = abs_loading.reshape(rows, cols)
+            
+            
+            
+            
+            
+            size = 5 
+            local_max = maximum_filter(abs_map, size=size) == abs_map
+            
+            
+            
+            
+            global_max = np.max(abs_map)
+            if global_max == 0: return []
+            
+            mask = local_max & (abs_map > (global_max * 0.01))
+            
+            
+            y_coords, x_coords = np.where(mask)
+            
+            
+            candidates = []
+            for r, c in zip(y_coords, x_coords):
+                val = abs_map[r, c]
+                idx = r * cols + c 
+                
+                intensities = []
+                if X is not None:
+                    if idx < X.shape[1]:
+                        intensities = X[:, idx].tolist()
+                        
+                p_h = ppm_h[c] if c < len(ppm_h) else 0
+                p_n = ppm_n[r] if ppm_n is not None and r < len(ppm_n) else 0
+                
+                candidates.append({
+                    "ppm_h": float(p_h),
+                    "ppm_n": float(p_n),
+                    "weight": float(val),
+                    "intensities": intensities,
+                    "r": int(r), "c": int(c) 
+                })
+            
+            
+            candidates.sort(key=lambda x: x['weight'], reverse=True)
+            
+            
+            
+            final_peaks = []
+            min_h = 0.2 
+            min_n = 1.0
+            print(f"DEBUG: extract_loading_peaks 2D running. PPM NMS H={min_h}, N={min_n}, local_max size={size}, Global Max={global_max}")
+            
+            while candidates and len(final_peaks) < top_n:
+                best = candidates.pop(0)
+                final_peaks.append(best)
+                
+                
+                new_candidates = []
+                for c in candidates:
+                    dh = abs(best['ppm_h'] - c['ppm_h'])
+                    dn = abs(best['ppm_n'] - c['ppm_n'])
+                    
+                    
+                    is_neighbor = (dh < min_h) and (dn < min_n)
+                    
+                    if not is_neighbor:
+                        new_candidates.append(c)
+                candidates = new_candidates
+            
+            
+            for i, p in enumerate(final_peaks):
+                p['rank'] = i + 1
+                peaks.append(p)
+                
+        else:
+            
+            
+            size = 5
+            local_max = maximum_filter(abs_loading, size=size) == abs_loading
+            global_max = np.max(abs_loading)
+            if global_max == 0: return []
+            
+            mask = local_max & (abs_loading > (global_max * 0.01))
+            idxs = np.where(mask)[0]
+            
+            candidates = []
+            for idx in idxs:
+                val = abs_loading[idx]
+                intensities = []
+                if X is not None:
+                    if idx < X.shape[1]:
+                        intensities = X[:, idx].tolist()
+                        
+                candidates.append({
+                    "ppm_h": float(ppm_h[idx]) if idx < len(ppm_h) else 0,
+                    "ppm_n": None,
+                    "weight": float(val),
+                    "intensities": intensities,
+                    "idx": int(idx) 
+                })
+                
+            candidates.sort(key=lambda x: x['weight'], reverse=True)
+            
+            
+            final_peaks = []
+            min_h_1d = 0.02
+            print(f"DEBUG: extract_loading_peaks 1D running. PPM NMS H={min_h_1d}, local_max size={size}, Global Max={global_max}")
+            
+            while candidates and len(final_peaks) < top_n:
+                best = candidates.pop(0)
+                final_peaks.append(best)
+                new_candidates = []
+                for c in candidates:
+                     dh = abs(best['ppm_h'] - c['ppm_h'])
+                     if not (dh < min_h_1d):
+                         new_candidates.append(c)
+                candidates = new_candidates
+            
+            for i, p in enumerate(final_peaks):
+                p['rank'] = i + 1
+                peaks.append(p)
+                
+        return peaks
+    except Exception as e:
+        print(f"Peak pick error: {e}")
+        return []
+
 def parse_bruker_param(filepath, param_name):
     if not os.path.exists(filepath):
         return None
@@ -36,7 +185,7 @@ def load_nmr_data(pdata_path):
     nc_proc = parse_bruker_param(procs_path, "NC_proc")
     ns = parse_bruker_param(acqus_path, "NS")
     rg = parse_bruker_param(acqus_path, "RG")
-    td_f2 = parse_bruker_param(acqus_path, "TD") # Note: this might need more careful handling for 2D
+    td_f2 = parse_bruker_param(acqus_path, "TD") 
     if nc_proc is None: nc_proc = 0
     if ns is None: ns = 1
     if rg is None: rg = 1
@@ -68,6 +217,68 @@ def load_nmr_data(pdata_path):
         },
         "shape": data.shape
     }
+def load_ucsf_data(filepath):
+    """
+    Load UCSF (Sparky) format data.
+    Returns dictionary compatible with load_projection_data output.
+    """
+    try:
+        dic, data = ng.sparky.read(filepath)
+        udic = ng.sparky.guess_udic(dic, data)
+        
+        
+        
+        
+        
+        
+        
+        
+        uc_0 = ng.fileio.fileiobase.uc_from_udic(udic, dim=0)
+        ppm_0 = uc_0.ppm_scale()
+        
+        uc_1 = ng.fileio.fileiobase.uc_from_udic(udic, dim=1)
+        ppm_1 = uc_1.ppm_scale()
+        
+        
+        
+        
+        
+        
+        label_0 = udic[0]['label']
+        label_1 = udic[1]['label']
+        
+        
+        ppm_h = ppm_1 
+        ppm_n = ppm_0 
+        final_data = data
+        
+        
+        
+        
+        
+        is_h_axis_0 = 'H' in label_0 or (np.mean(ppm_0) < 15 and np.mean(ppm_1) > 20)
+        
+        if is_h_axis_0:
+            final_data = data.T
+            ppm_h = ppm_0
+            ppm_n = ppm_1
+        
+        
+        proj_h = np.mean(final_data, axis=0)
+        proj_n = np.mean(final_data, axis=1)
+        
+        return {
+            "full_data": final_data.astype(np.float64),
+            "expanded_n": proj_n,
+            "expanded_h": proj_h,
+            "ppm_axis": ppm_h,
+            "ppm_axis_15n": ppm_n,
+            "params": {"nc_proc": 0, "ns": 1, "rg": 1},
+            "is_1d": False
+        }
+
+    except Exception as e:
+        return {"error": f"Error loading UCSF {os.path.basename(filepath)}: {str(e)}"}
 def extract_delays(exp_path):
     for fname in ['vdlist', 'vclist']:
         fpath = os.path.join(exp_path, fname)
@@ -175,6 +386,8 @@ def get_ppm_scale(dic, data, axis=0):
     except:
         return np.linspace(0, 1, data.shape[axis])
 def load_projection_data(pdata_path):
+    if pdata_path.endswith('.ucsf'):
+        return load_ucsf_data(pdata_path)
     try:
         p_2rr = os.path.join(pdata_path, '2rr')
         p_1r = os.path.join(pdata_path, '1r')
@@ -185,7 +398,7 @@ def load_projection_data(pdata_path):
                 os.rename(p_1r, p_1r_stash)
                 stashed = True
             except:
-                pass # Permission error?
+                pass 
         try:
             dic, data = ng.bruker.read_pdata(pdata_path)
         finally:
@@ -208,7 +421,7 @@ def load_projection_data(pdata_path):
         sf = parse_bruker_param(procs_path, "SF")
         if sf is None: sf = parse_bruker_param(acqus_path, "SFO1")
         if sf is None: sf = parse_bruker_param(acqus_path, "BF1")
-        if sf is None: sf = 600.0 # Last resort fallback
+        if sf is None: sf = 600.0 
         start_ppm = None
         end_ppm = None
         offset = parse_bruker_param(procs_path, "OFFSET")
@@ -247,7 +460,7 @@ def load_projection_data(pdata_path):
         ppm_axis_15n = None
         proc2s_path = os.path.join(pdata_path, "proc2s")
         acqu2s_path = os.path.join(exp_path, "acqu2s")
-        sf_2 = parse_bruker_param(proc2s_path, "SF") # try proc first
+        sf_2 = parse_bruker_param(proc2s_path, "SF") 
         if sf_2 is None: sf_2 = parse_bruker_param(acqu2s_path, "SFO2") 
         if sf_2 is None: sf_2 = parse_bruker_param(acqu2s_path, "BF2")
         if sf_2 is None: sf_2 = 60.0 
@@ -255,7 +468,7 @@ def load_projection_data(pdata_path):
             offset_2 = parse_bruker_param(proc2s_path, "OFFSET")
             sw_p_2 = parse_bruker_param(proc2s_path, "SW_p")
             if offset_2 is not None and sw_p_2 is not None:
-                if sw_p_2 > 500: sw_p_2 = sw_p_2 / sf_2 # Hz check
+                if sw_p_2 > 500: sw_p_2 = sw_p_2 / sf_2 
                 ppm_axis_15n = np.linspace(offset_2, offset_2 - sw_p_2, size_f1)
         if ppm_axis_15n is None:
             sw_2_acq = parse_bruker_param(acqu2s_path, "SW")
@@ -271,8 +484,8 @@ def load_projection_data(pdata_path):
             o1p_2 = parse_bruker_param(acqu2s_path, "O1P")
             sw_2 = parse_bruker_param(acqu2s_path, "SW")
             sf_2 = parse_bruker_param(acqu2s_path, "SFO2") 
-            if sf_2 is None: sf_2 = parse_bruker_param(acqu2s_path, "BF2") # Spectrometer Freq
-            if sf_2 is None: sf_2 = 60.0 # Approximate 15N freq on 600MHz
+            if sf_2 is None: sf_2 = parse_bruker_param(acqu2s_path, "BF2") 
+            if sf_2 is None: sf_2 = 60.0 
             if sw_2 is not None:
                  if sw_2 > 500: sw_2_ppm = sw_2 / sf_2
                  else: sw_2_ppm = sw_2
@@ -297,7 +510,7 @@ def load_projection_data(pdata_path):
         return {"error": f"Error loading {os.path.basename(pdata_path)}: {str(e)}"}
 def align_spectra(data_list, ppm_axes_list):
     if not ppm_axes_list or len(ppm_axes_list) != len(data_list):
-        return data_list, None # Cannot align
+        return data_list, None 
     global_min_ppm = -np.inf
     global_max_ppm = np.inf
     for ppm in ppm_axes_list:
@@ -305,13 +518,13 @@ def align_spectra(data_list, ppm_axes_list):
         if p_min > global_min_ppm: global_min_ppm = p_min
         if p_max < global_max_ppm: global_max_ppm = p_max
     if global_max_ppm <= global_min_ppm:
-        return data_list, None # No overlap
+        return data_list, None 
     max_points = 0
     for ppm in ppm_axes_list:
         mask = (ppm >= global_min_ppm) & (ppm <= global_max_ppm)
         count = np.sum(mask)
         if count > max_points: max_points = count
-    if max_points < 2: max_points = 100 # Fallback
+    if max_points < 2: max_points = 100 
     common_axis = np.linspace(global_max_ppm, global_min_ppm, max_points)
     aligned_data = []
     for i, data in enumerate(data_list):
@@ -323,7 +536,7 @@ def align_spectra(data_list, ppm_axes_list):
                 aligned_data.append(aligned_spec)
             except Exception as e:
                 print(f"Alignment failed for index {i}: {e}")
-                aligned_data.append(data) # Fallback
+                aligned_data.append(data) 
         elif data.ndim == 2:
              new_shape = (data.shape[0], len(common_axis))
              aligned_mat = np.zeros(new_shape)
@@ -336,16 +549,29 @@ def align_spectra(data_list, ppm_axes_list):
 def run_pca_and_fit(data_list, concentrations, protein_conc=50.0, regime="Intermediate", ppm_axes=None, ppm_range=None, exclude_ranges=None, no_fitting=False, ppm_15n=None, shape_2d=None):
     if not data_list or len(data_list) < 2:
         return {"success": False, "error": "Insufficient data"}
+    
+    common_axis = None
     common_axis = None
     if ppm_axes and len(ppm_axes) == len(data_list):
         try:
-             data_list, common_axis = align_spectra(data_list, ppm_axes)
-             if shape_2d and len(data_list) > 0 and data_list[0].ndim == 2:
-                 shape_2d = data_list[0].shape
+             aligned_data, common_axis_aligned = align_spectra(data_list, ppm_axes)
+             if aligned_data:
+                 data_list = aligned_data
+                 common_axis = common_axis_aligned
+                 
+                 
+                 if shape_2d and len(data_list) > 0:
+                     if data_list[0].ndim == 2:
+                         new_shape = data_list[0].shape
+                         if new_shape != shape_2d:
+                             print(f"DEBUG: Alignment changed shape from {shape_2d} to {new_shape}")
+                             shape_2d = new_shape
+                             
         except Exception as e:
              return {"success": False, "error": f"Alignment failed: {str(e)}"}
     elif ppm_axes and len(ppm_axes) > 0:
         common_axis = ppm_axes[0]
+        
     if ppm_range and common_axis is not None:
         try:
             p_start, p_end = ppm_range
@@ -408,7 +634,7 @@ def run_pca_and_fit(data_list, concentrations, protein_conc=50.0, regime="Interm
             X = np.vstack(data_list)
         n_comp = 2
         pca = PCA(n_components=n_comp)
-        scores = pca.fit_transform(X) # (N_samples, n_comp)
+        scores = pca.fit_transform(X) 
         var = pca.explained_variance_ratio_.tolist()
         pc1 = scores[:, 0]
         pc2 = scores[:, 1] if scores.shape[1] > 1 else np.zeros_like(pc1)
@@ -417,18 +643,18 @@ def run_pca_and_fit(data_list, concentrations, protein_conc=50.0, regime="Interm
         final_ppm = common_axis
         final_ppm_15n = ppm_15n
         final_shape = shape_2d
-        final_all = X.tolist() # Default for 1D
+        final_all = X.tolist() 
         if shape_2d:
             final_all = [] 
             rows, cols = shape_2d
-            MAX_DIM = 256 # Constraint for performance of overlays
+            MAX_DIM = 256 
             def downsample_2d(flat_arr, r, c, r_step, c_step, nr, nc):
                 try:
                     mat = flat_arr.reshape(r, c)
                     mat = mat[:nr*r_step, :nc*c_step]
                     return mat.reshape(nr, r_step, nc, c_step).max(axis=(1, 3)).flatten()
                 except:
-                    return flat_arr # Fallback
+                    return flat_arr 
             if rows > MAX_DIM or cols > MAX_DIM:
                 try:
                     r_step = max(1, int(np.ceil(rows / MAX_DIM)))
@@ -447,7 +673,7 @@ def run_pca_and_fit(data_list, concentrations, protein_conc=50.0, regime="Interm
                         final_ppm_15n = final_ppm_15n[:new_rows*r_step:r_step]
                 except Exception as e:
                     print(f"Downsampling error: {e}")
-                    pass # Fallback
+                    pass 
             else:
                  final_all = X.tolist()
         hsqc_img_b64 = None
@@ -510,7 +736,16 @@ def run_pca_and_fit(data_list, concentrations, protein_conc=50.0, regime="Interm
                  for comp in pca.components_]
                 if shape_2d and (shape_2d[0] > 256 or shape_2d[1] > 256) 
                 else pca.components_.tolist()
-            )
+            ),
+            "loading_peaks": [
+                extract_loading_peaks(
+                    comp, 
+                    common_axis, 
+                    ppm_15n if shape_2d else None, 
+                    shape_2d,
+                    X=X
+                ) for comp in pca.components_
+            ]
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -529,14 +764,14 @@ def run_3way_analysis(path_list, concentrations, protein_conc, regime="Intermedi
     list_2d = []
     list_h = []
     list_n = []
-    ppm_axes = [] # Aligned order
+    ppm_axes = [] 
     errors = []
     valid_indices = []
     final_list_2d = []
     final_list_h = []
     final_list_n = []
-    final_ppm_axes = []     # For 1H
-    final_ppm_axes_15n = [] # For 15N
+    final_ppm_axes = []     
+    final_ppm_axes_15n = [] 
     ppm_15n_ref = None
     shape_2d_ref = None
     for i, path in enumerate(path_list):
@@ -573,7 +808,7 @@ def run_3way_analysis(path_list, concentrations, protein_conc, regime="Intermedi
     list_n = final_list_n
     ppm_axes = final_ppm_axes
     ppm_axes_15n = final_ppm_axes_15n
-    concentrations = valid_concs # Use filtered concs for analysis
+    concentrations = valid_concs 
     if not list_2d and not list_h:
          return {"error": "No data found"}
     if list_2d and shape_2d_ref is None and len(list_2d) > 0:
@@ -620,7 +855,7 @@ def run_residue_pca(residue_data, feature_names=None):
     if data.ndim != 2 or data.shape[1] < 2:
         return {"error": "Insufficient data for PCA. Need at least 2 columns (ID + Feature)"}
     residue_nos = data[:, 0]
-    features = data[:, 1:].astype(float) # All but first column
+    features = data[:, 1:].astype(float) 
     n_features = features.shape[1]
     if not feature_names or len(feature_names) != n_features:
         feature_names = [f"Col {i+1}" for i in range(n_features)]
@@ -639,7 +874,7 @@ def run_residue_pca(residue_data, feature_names=None):
             "pc_index": i + 1,
             "scores": scores[:, i].tolist(),
             "loadings": {name: float(val) for name, val in zip(feature_names, loadings[i])},
-            "success": False # "success" triggers Titration fit in frontend; FALSE triggers Residue view
+            "success": False 
         })
     return {
         "results": results,
@@ -651,7 +886,7 @@ def generate_hsqc_image(spectra_list, ppm_h, ppm_n, concentrations=None):
     try:
         if not spectra_list or not ppm_h or not ppm_n:
             return None
-        fig, ax = plt.subplots(figsize=(10, 8)) # Larger figure
+        fig, ax = plt.subplots(figsize=(10, 8)) 
         if concentrations:
             pairs = sorted(zip(concentrations, spectra_list), key=lambda x: x[0])
             sorted_specs = [p[1] for p in pairs]
@@ -667,10 +902,10 @@ def generate_hsqc_image(spectra_list, ppm_h, ppm_n, concentrations=None):
             s_max = np.max(spec)
             if s_max <= 0: continue
             base_lvl = s_max * 0.05 
-            factor = 1.6 # 1.4^n spacing roughly
+            factor = 1.6 
             levels = [base_lvl * (factor ** k) for k in range(8)]
             levels = [l for l in levels if l < s_max]
-            if not levels: levels = [s_max * 0.5, s_max * 0.9] # Fallback
+            if not levels: levels = [s_max * 0.5, s_max * 0.9] 
             ax.contour(X_grid, Y_grid, spec, levels=levels, colors=[colors[i]], linewidths=0.7)
         ax.set_xlabel('1H (ppm)', fontsize=12)
         ax.set_ylabel('15N (ppm)', fontsize=12)
@@ -683,7 +918,7 @@ def generate_hsqc_image(spectra_list, ppm_h, ppm_n, concentrations=None):
             ax.legend(custom_lines, [f'{sorted_concs[0]} uM', f'{sorted_concs[-1]} uM'], loc='upper right')
         plt.tight_layout()
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=150, transparent=True) # Transparent background
+        plt.savefig(buf, format='png', dpi=150, transparent=True) 
         plt.close(fig)
         buf.seek(0)
         b64_str = base64.b64encode(buf.read()).decode('utf-8')

@@ -8,7 +8,7 @@ import re
 import numpy as np
 import sys
 
-# Ensure backend directory is in path for imports
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from analyzer import load_nmr_data, run_pca_and_fit, parse_bruker_param, run_3way_analysis, fit_with_regime_constraint
 
@@ -34,7 +34,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": str(exc), "trace": traceback.format_exc()},
     )
 
-# Robust cross-platform root detection
+
 ALLOWED_ROOT = os.environ.get("ALLOWED_ROOT", os.path.abspath(os.sep))
 
 def ensure_safe_path(path: str):
@@ -45,7 +45,7 @@ def ensure_safe_path(path: str):
         raise HTTPException(status_code=404, detail=f"Path not found: {path}")
     return abs_path
 
-# Logo Endpoint
+
 @app.get("/logo")
 async def get_logo():
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -61,6 +61,35 @@ async def scan_directory(path: str = Form(...), dim: str = Form("2D")):
     safe_path = ensure_safe_path(path)
     found_experiments = []
     target_file = '2rr' if dim == '2D' else '1r'
+    
+    
+    if dim == "2D_ucsf":
+        for root, dirs, files in os.walk(safe_path):
+            for file in files:
+                if file.endswith(".ucsf"):
+                    full_path = os.path.join(root, file)
+                    display_name = file
+                    
+                    try:
+                        parent_name = os.path.basename(os.path.dirname(full_path))
+                        display_name = f"{parent_name}/{file}"
+                    except:
+                        pass
+                        
+                    found_experiments.append({
+                        "path": full_path,
+                        "name": display_name,
+                        "nc_proc": 0,    
+                        "sw": 0,         
+                        "o1p": 0,
+                        "td": 0,
+                        "ns": 1,         
+                        "rg": 1,         
+                        "dim": dim
+                    })
+        found_experiments.sort(key=lambda x: x['name'])
+        return {"experiments": found_experiments}
+
     
     for root, dirs, files in os.walk(safe_path):
         if target_file in files:
@@ -118,6 +147,28 @@ async def upload_scan_directory(files: List[UploadFile] = File(...), dim: str = 
     
     found_experiments = []
     target_file = '2rr' if dim == '2D' else '1r'
+    
+    
+    if dim == "2D_ucsf":
+        for root, dirs, filenames in os.walk(temp_dir):
+            for file in filenames:
+                if file.endswith(".ucsf"):
+                    full_path = os.path.join(root, file)
+                    try:
+                        rel_path = os.path.relpath(full_path, temp_dir)
+                        display_name = rel_path
+                    except:
+                        display_name = file
+                        
+                    found_experiments.append({
+                        "path": full_path,
+                        "name": display_name,
+                        "nc_proc": 0,
+                        "sw": 0, "o1p": 0, "td": 0, "ns": 1, "rg": 1, "dim": dim
+                    })
+        found_experiments.sort(key=lambda x: x['name'])
+        return {"experiments": found_experiments, "temp_id": temp_dir}
+
     
     for root, dirs, filenames in os.walk(temp_dir):
         if target_file in filenames:
@@ -187,22 +238,22 @@ async def refit_regime(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Mount Frontend for Static Serving (Must be LAST to avoid shadowing API)
+
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 else:
     print(f"Warning: Frontend directory not found at {frontend_dir}")
 
-# Startup Event for Auto-Open
-# Auto-open removed to default to run.sh/run.bat control
-# @app.on_event("startup")
-# async def startup_event():
-#     pass
+
+
+
+
+
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 7777))
-    # Listen on localhost (127.0.0.1) explicitly
-    # Pass 'app' object to avoid re-import execution loop
+    
+    
     uvicorn.run(app, host="127.0.0.1", port=port)
